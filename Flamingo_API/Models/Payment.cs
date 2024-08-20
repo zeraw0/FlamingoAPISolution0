@@ -33,6 +33,7 @@ namespace Flamingo_API.Models
         [DataType(DataType.Currency)]
         [Column(TypeName = "decimal(18, 2)")]
         public decimal Amount { get; set; }
+        public decimal Retainer { get; set; }
 
         public Booking Booking { get; set; }
     }

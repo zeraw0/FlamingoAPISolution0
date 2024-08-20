@@ -11,5 +11,6 @@ namespace Flamingo_API.Models
         Task AddAsync(Flight flight);
         Task UpdateAsync(Flight flight);
         Task DeleteAsync(int id);
+        Task<Flight> GetByBookingIdAsync(int bookingid);
     }
 }

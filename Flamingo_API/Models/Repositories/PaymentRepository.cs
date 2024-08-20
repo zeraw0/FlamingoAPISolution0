@@ -28,5 +28,20 @@ namespace Flamingo_API.Models
             await _context.Payments.AddAsync(payment);
             await _context.SaveChangesAsync();
         }
+
+      public async Task<Payment> GetByBookingIdAsync(int bookingId)
+        {
+             return await _context.Payments
+                     .SingleOrDefaultAsync(t => t.BookingIdFK == bookingId);
+        }
+
+        public async Task UpdateAsync(Payment payment)
+        {
+
+            _context.Payments.Update(payment);
+            await _context.SaveChangesAsync();
+            //throw new NotImplementedException();
+        }
+
     }
 }

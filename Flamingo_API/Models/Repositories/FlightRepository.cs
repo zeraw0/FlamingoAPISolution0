@@ -48,5 +48,16 @@ namespace Flamingo_API.Models
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<Flight> GetByBookingIdAsync(int bookingid)
+        {
+            var bookingX = _context.Bookings.Find(bookingid);
+
+            var FlightIdX = bookingX.FlightIdFK;
+
+            return await _context.Flights
+                     .SingleOrDefaultAsync(f => f.FlightId == FlightIdX);
+            //throw new NotImplementedException();
+        }
     }
 }

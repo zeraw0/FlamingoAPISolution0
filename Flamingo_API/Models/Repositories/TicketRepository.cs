@@ -36,5 +36,19 @@ namespace Flamingo_API.Models
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<Ticket> GetByBookingIdAndTicketIdAsync(int bookingId, int ticketId)
+        {
+            //throw new NotImplementedException();
+            return await _context.Tickets
+                         .FirstOrDefaultAsync(t => t.BookingIdFK == bookingId && t.TicketId == ticketId);
+        }
+
+        public async Task UpdateAsync(Ticket ticket)
+        {
+            _context.Tickets.Update(ticket);
+            await _context.SaveChangesAsync();
+            //throw new NotImplementedException();
+        }
     }
 }

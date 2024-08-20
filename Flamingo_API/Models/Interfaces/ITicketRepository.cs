@@ -8,5 +8,8 @@ namespace Flamingo_API.Models
         Task<IEnumerable<Ticket>> GetByBookingIdAsync(int bookingId);
         Task AddAsync(Ticket ticket);
         Task DeleteAsync(int ticketId); // New method for deleting a ticket
+        Task<Ticket> GetByBookingIdAndTicketIdAsync(int bookingId, int ticketId);
+
+        Task UpdateAsync (Ticket ticket);   
     }
 }

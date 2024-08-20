@@ -84,6 +84,15 @@ namespace Flamingo_API.Controllers
                 await _ticketRepo.AddAsync(ticket);
             }
 
+            //decrease seat from flight 
+            flight.AvailableSeats = flight.AvailableSeats-request.Seats;
+            // Save updated flight data to the database
+            await _flightRepo.UpdateAsync(flight);
+
+
+
+
+
             return CreatedAtAction(nameof(GetBooking), new { id = booking.BookingId }, booking);
         }
 
@@ -110,21 +119,76 @@ namespace Flamingo_API.Controllers
                 return NotFound();
             }
 
+
+            var flight = await _flightRepo.GetByBookingIdAsync(id); //GetByBookingIdAsync(id);
             // Delete tickets
             var tickets = await _ticketRepo.GetByBookingIdAsync(id);
             if (tickets != null)
             {
                 foreach (var ticket in tickets)
                 {
+
                     await _ticketRepo.DeleteAsync(ticket.TicketId);
+                    flight.AvailableSeats += 1;
+                    await _flightRepo.UpdateAsync(flight);
+
                 }
             }
 
-            // Delete booking
+            // Delete booking (set cancelled to 1)
             await _bookingRepo.CancelAsync(id);
+
+            //update payments
+            var payment = await _paymentRepo.GetByBookingIdAsync(id);
+            if (payment != null)
+            {
+                payment.Retainer += payment.Amount * 0.5m;
+                payment.Amount = 0;
+
+                await _paymentRepo.UpdateAsync(payment); // Assuming there's an UpdateAsync method to save changes
+            }
 
             return NoContent();
         }
+
+
+        //delete tikcets
+        [HttpDelete("{bookingId}/ticket/{ticketId}")]
+        public async Task<IActionResult> DeleteTicket(int bookingId, int ticketId)
+        {
+            // Fetch the ticket by its ID and Booking ID
+            var ticket = await _ticketRepo.GetByBookingIdAndTicketIdAsync(bookingId, ticketId);
+            if (ticket == null)
+            {
+                return NotFound();
+            }
+
+            var payment = await _paymentRepo.GetByBookingIdAsync(bookingId);
+            payment.Amount -= ticket.Price;
+            payment.Retainer += ticket.Price * 0.5m;
+
+
+
+            // Delete the specific ticket
+            var flight = await _flightRepo.GetByBookingIdAsync(bookingId); //GetByBookingIdAsync(id);
+            await _ticketRepo.DeleteAsync(ticket.TicketId);
+            flight.AvailableSeats += 1;
+            await _flightRepo.UpdateAsync(flight);
+
+            // Check if there are any remaining tickets for this booking
+            var remainingTickets = await _ticketRepo.GetByBookingIdAsync(bookingId);
+
+            if (remainingTickets == null || !remainingTickets.Any())
+            {
+                // If no tickets remain, cancel the booking
+                await _bookingRepo.CancelAsync(bookingId);
+            }
+
+            return NoContent();
+        }
+
+
+
 
         // Helper method to generate a unique PNR (for illustration purposes)
         private string GeneratePnr()

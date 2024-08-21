@@ -49,5 +49,28 @@ namespace Flamingo_API.Models
                 await _context.SaveChangesAsync();
             }
         }
+
+
+
+        public bool ValidateUser(string uname, string pwd, string role)
+        {
+            //throw new NotImplementedException();
+            User user = _context.Users.Where(u => u.Email == uname).Single();
+
+            if (user.Password == pwd)
+            {
+                return true;
+            }
+
+            else
+            {
+                return false;
+            }
+
+
+        }
+
+
+
     }
 }

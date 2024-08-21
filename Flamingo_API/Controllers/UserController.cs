@@ -3,6 +3,15 @@ using Microsoft.EntityFrameworkCore; // Add this line
 using Flamingo_API.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+
+using Flamingo_API.Helpers;
+
+
+using ConfigurationManager = Flamingo_API.Helpers.ConfigurationManager;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace Flamingo_API.Controllers
 {
@@ -66,6 +75,44 @@ namespace Flamingo_API.Controllers
             return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, user);
         }
 
+
+
+        // POST api/<AuthenticationController>
+        [HttpPost("login")]
+        public IActionResult Post([FromBody] Login user)
+        {
+            if (user is null)
+            {
+                return BadRequest("Invalid user request!!!");
+            }
+
+            if (_repo.ValidateUser(user.Email, user.Password, user.Role))
+            {
+                var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ConfigurationManager.AppSetting["JWT:Secret"]));
+                var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
+                var tokeOptions = new JwtSecurityToken(
+                    issuer: ConfigurationManager.AppSetting["Jwt:ValidIssuer"],
+                    audience: ConfigurationManager.AppSetting["Jwt:ValidAudience"],
+                    //claims: new List<Claim>(),
+                    claims: new List<Claim>(new Claim[] {
+                    new Claim(ClaimTypes.Name,user.Email),
+                    new Claim(ClaimTypes.Role,user.Role)
+                                   }),
+                    expires: DateTime.Now.AddMinutes(6),
+                    signingCredentials: signinCredentials
+                ); ;
+                var tokenString = new JwtSecurityTokenHandler().WriteToken(tokeOptions);
+                return Ok(new JWTTokenResponse { Token = tokenString });
+            }
+            return Unauthorized();
+        }
+
+
+
+
+
+
+
         // PUT: api/User/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUser(int id, [FromBody] User user)
@@ -121,4 +168,16 @@ namespace Flamingo_API.Controllers
             return NoContent();
         }
     }
+
+
+
+    public class Login
+    {
+        public string? Email { get; set; }
+        public string? Password { get; set; }
+
+        public string Role { get; set; }
+
+    }
+
 }

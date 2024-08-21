@@ -11,5 +11,8 @@ namespace Flamingo_API.Models
         Task AddAsync(User user);
         Task UpdateAsync(User user);
         Task DeleteAsync(int id);
+
+
+        bool ValidateUser(string uname, string pwd, string role);
     }
 }

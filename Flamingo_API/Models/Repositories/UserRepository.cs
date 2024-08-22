@@ -52,11 +52,11 @@ namespace Flamingo_API.Models
 
 
 
-        public User? ValidateUser(string uname, string pwd)
+        public User? ValidateUser(string email, string password)
         {
-            User user = _context.Users.SingleOrDefault(u => u.Email == uname);
+            User user = _context.Users.SingleOrDefault(u => u.Email == email);
 
-            if (user != null && user.Password == pwd)
+            if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
             {
                 return user;
             }

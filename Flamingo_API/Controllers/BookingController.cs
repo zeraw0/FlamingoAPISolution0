@@ -74,7 +74,9 @@ namespace Flamingo_API.Controllers
             }
 
             // Retrieve UserId from the JWT token
-            var userIdClaim = HttpContext.User.FindFirst("UserId");
+            //var userIdClaim = HttpContext.User.FindFirst("UserId");
+
+            var userIdClaim = User.Claims.FirstOrDefault(c=>c.Type=="UserId");
 
             if (userIdClaim == null)
             {
@@ -129,17 +131,19 @@ namespace Flamingo_API.Controllers
                 var ticket = new Ticket
                 {
                     BookingIdFK = booking.BookingId,
-                    SeatNumber = $"Seat-{i + 1}", // Generate seat number as needed
+                    SeatNumber = $"Seat-{flight.TotalNumberOfSeats - flight.AvailableSeats + 1}", // Generate seat number as needed
                     PassengerName = request.PassengerNames[i],
                     Price = flight.Price
                 };
 
                 await _ticketRepo.AddAsync(ticket);
+                flight.AvailableSeats -= request.Seats;
+                await _flightRepo.UpdateAsync(flight);
             }
 
             // Decrease available seats for the flight
-            flight.AvailableSeats -= request.Seats;
-            await _flightRepo.UpdateAsync(flight);
+            //flight.AvailableSeats -= request.Seats;
+            //await _flightRepo.UpdateAsync(flight);
 
             return CreatedAtAction(nameof(GetBooking), new { id = booking.BookingId }, booking);
         }

@@ -71,6 +71,9 @@ namespace Flamingo_API.Controllers
                 return BadRequest();
             }
 
+            // Hash the password before storing
+            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
             await _repo.AddAsync(user);
             return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, user);
         }

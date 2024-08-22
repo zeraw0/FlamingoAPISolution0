@@ -13,6 +13,6 @@ namespace Flamingo_API.Models
         Task DeleteAsync(int id);
 
 
-        bool ValidateUser(string uname, string pwd, string role);
+        public User? ValidateUser(string uname, string pwd);
     }
 }

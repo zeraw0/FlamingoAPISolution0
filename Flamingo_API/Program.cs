@@ -38,10 +38,8 @@ namespace Flamingo_API
 
             builder.Services.AddControllers();
 
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            // Configure Swagger/OpenAPI
             builder.Services.AddEndpointsApiExplorer();
-
-
             builder.Services.AddSwaggerGen(options =>
             {
                 options.SwaggerDoc("V1", new OpenApiInfo
@@ -75,30 +73,30 @@ namespace Flamingo_API
                 });
             });
 
-           // builder.Services.AddTransient<ILogin, LoginRepo>();
+            // Configure authentication
             builder.Services.AddAuthentication(opt => {
                 opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             })
-                .AddJwtBearer(options =>
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = ConfigurationManager.AppSetting ["Jwt:ValidIssuer"],
-                        ValidAudience = ConfigurationManager.AppSetting["Jwt:ValidAudience"],
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ConfigurationManager.AppSetting["Jwt:Secret"]))
-                    };
-                });
-            builder.Services.AddAuthorization(
-                options =>
-                {
-                    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-                    options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
-                });
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = ConfigurationManager.AppSetting["Jwt:ValidIssuer"],
+                    ValidAudience = ConfigurationManager.AppSetting["Jwt:ValidAudience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ConfigurationManager.AppSetting["Jwt:Secret"]))
+                };
+            });
+
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+                options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
+            });
 
             var app = builder.Build();
 
@@ -106,12 +104,14 @@ namespace Flamingo_API
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI(options => {
+                app.UseSwaggerUI(options =>
+                {
                     options.SwaggerEndpoint("/swagger/V1/swagger.json", "Product WebAPI");
                 });
             }
 
             app.UseHttpsRedirection();
+            app.UseAuthentication(); // Ensure authentication middleware is used
             app.UseAuthorization();
 
             app.MapControllers();

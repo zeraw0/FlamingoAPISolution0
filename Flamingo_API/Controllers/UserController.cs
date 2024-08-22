@@ -63,7 +63,7 @@ namespace Flamingo_API.Controllers
         }
 
         // POST: api/User
-        [HttpPost]
+        [HttpPost("register")]
         public async Task<ActionResult<User>> PostUser([FromBody] User user)
         {
             if (user == null)
@@ -79,31 +79,36 @@ namespace Flamingo_API.Controllers
 
         // POST api/<AuthenticationController>
         [HttpPost("login")]
-        public IActionResult Post([FromBody] Login user)
+        public IActionResult Post([FromBody] Login login)
         {
-            if (user is null)
+            if (login == null)
             {
                 return BadRequest("Invalid user request!!!");
             }
 
-            if (_repo.ValidateUser(user.Email, user.Password, user.Role))
+            var validUser = _repo.ValidateUser(login.Email, login.Password);
+            if (validUser != null)  // If the user is valid
             {
                 var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ConfigurationManager.AppSetting["JWT:Secret"]));
                 var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
-                var tokeOptions = new JwtSecurityToken(
+                var tokenOptions = new JwtSecurityToken(
                     issuer: ConfigurationManager.AppSetting["Jwt:ValidIssuer"],
                     audience: ConfigurationManager.AppSetting["Jwt:ValidAudience"],
-                    //claims: new List<Claim>(),
-                    claims: new List<Claim>(new Claim[] {
-                    new Claim(ClaimTypes.Name,user.Email),
-                    new Claim(ClaimTypes.Role,user.Role)
-                                   }),
-                    expires: DateTime.Now.AddMinutes(6),
+                    claims: new List<Claim>
+                    {
+                new Claim(ClaimTypes.Name, validUser.Email),
+                //new Claim("UserId", validUser.UserId.ToString()),  // Include UserId in the token
+                new Claim("UserId", validUser.UserId.ToString()),  // Include UserId in the token
+                new Claim(ClaimTypes.Role, validUser.Role)  // Include Role in the token
+                    },
+                    expires: DateTime.Now.AddHours(1),
                     signingCredentials: signinCredentials
-                ); ;
-                var tokenString = new JwtSecurityTokenHandler().WriteToken(tokeOptions);
+                );
+
+                var tokenString = new JwtSecurityTokenHandler().WriteToken(tokenOptions);
                 return Ok(new JWTTokenResponse { Token = tokenString });
             }
+
             return Unauthorized();
         }
 
@@ -176,7 +181,7 @@ namespace Flamingo_API.Controllers
         public string? Email { get; set; }
         public string? Password { get; set; }
 
-        public string Role { get; set; }
+       
 
     }
 

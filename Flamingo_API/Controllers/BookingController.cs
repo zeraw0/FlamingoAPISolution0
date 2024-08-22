@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Flamingo_API.Controllers
 {
@@ -25,6 +26,44 @@ namespace Flamingo_API.Controllers
             _ticketRepo = ticketRepo;
         }
 
+
+
+
+
+
+
+
+        // GET api/claims
+        [HttpGet("getClaimsTest")]
+        //[Authorize] // Ensure that the user is authenticated
+        public ActionResult GetClaims()
+        {
+            // Retrieve all claims from the JWT token
+            var claims = HttpContext.User.Claims.ToList();
+
+            // Check if any claims were retrieved
+            if (claims == null || !claims.Any())
+            {
+                return NotFound("No claims found in the token.");
+            }
+
+            // Convert claims to a dictionary for easier display
+            var claimsDictionary = claims.ToDictionary(c => c.Type, c => c.Value);
+
+            // Return claims as a JSON response
+            return Ok(claimsDictionary);
+        }
+
+
+
+
+
+
+
+
+
+
+
         // POST api/Booking
         [HttpPost]
         public async Task<ActionResult<Booking>> PostBooking([FromBody] BookingRequest request)
@@ -34,6 +73,20 @@ namespace Flamingo_API.Controllers
                 return BadRequest("Invalid request data.");
             }
 
+            // Retrieve UserId from the JWT token
+            var userIdClaim = HttpContext.User.FindFirst("UserId");
+
+            if (userIdClaim == null)
+            {
+                return Unauthorized("User ID not found in token.");
+            }
+
+            if (!int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized("Invalid User ID format in token.");
+            }
+
+            // Proceed with the rest of the method
             var flight = await _flightRepo.GetByIdAsync(request.FlightId);
             if (flight == null)
             {
@@ -49,7 +102,7 @@ namespace Flamingo_API.Controllers
             var booking = new Booking
             {
                 FlightIdFK = request.FlightId,
-                UserIdFK = request.UserId, // Assuming user ID is provided in the request
+                UserIdFK = userId, // Use UserId from token
                 BookingDate = DateTime.UtcNow,
                 PNR = GeneratePnr(), // Implement GeneratePnr() to create unique PNR
                 IsCancelled = false
@@ -84,17 +137,15 @@ namespace Flamingo_API.Controllers
                 await _ticketRepo.AddAsync(ticket);
             }
 
-            //decrease seat from flight 
-            flight.AvailableSeats = flight.AvailableSeats-request.Seats;
-            // Save updated flight data to the database
+            // Decrease available seats for the flight
+            flight.AvailableSeats -= request.Seats;
             await _flightRepo.UpdateAsync(flight);
-
-
-
-
 
             return CreatedAtAction(nameof(GetBooking), new { id = booking.BookingId }, booking);
         }
+
+
+
 
         // GET api/Booking/5
         [HttpGet("{id}")]
@@ -119,7 +170,6 @@ namespace Flamingo_API.Controllers
                 return NotFound();
             }
 
-
             var flight = await _flightRepo.GetByBookingIdAsync(id); //GetByBookingIdAsync(id);
             // Delete tickets
             var tickets = await _ticketRepo.GetByBookingIdAsync(id);
@@ -127,18 +177,16 @@ namespace Flamingo_API.Controllers
             {
                 foreach (var ticket in tickets)
                 {
-
                     await _ticketRepo.DeleteAsync(ticket.TicketId);
                     flight.AvailableSeats += 1;
                     await _flightRepo.UpdateAsync(flight);
-
                 }
             }
 
             // Delete booking (set cancelled to 1)
             await _bookingRepo.CancelAsync(id);
 
-            //update payments
+            // Update payments
             var payment = await _paymentRepo.GetByBookingIdAsync(id);
             if (payment != null)
             {
@@ -151,8 +199,7 @@ namespace Flamingo_API.Controllers
             return NoContent();
         }
 
-
-        //delete tikcets
+        // Delete tickets
         [HttpDelete("{bookingId}/ticket/{ticketId}")]
         public async Task<IActionResult> DeleteTicket(int bookingId, int ticketId)
         {
@@ -166,8 +213,6 @@ namespace Flamingo_API.Controllers
             var payment = await _paymentRepo.GetByBookingIdAsync(bookingId);
             payment.Amount -= ticket.Price;
             payment.Retainer += ticket.Price * 0.5m;
-
-
 
             // Delete the specific ticket
             var flight = await _flightRepo.GetByBookingIdAsync(bookingId); //GetByBookingIdAsync(id);
@@ -187,9 +232,6 @@ namespace Flamingo_API.Controllers
             return NoContent();
         }
 
-
-
-
         // Helper method to generate a unique PNR (for illustration purposes)
         private string GeneratePnr()
         {
@@ -201,7 +243,6 @@ namespace Flamingo_API.Controllers
     public class BookingRequest
     {
         public int FlightId { get; set; }
-        public int UserId { get; set; }
         public int Seats { get; set; }
         public List<string> PassengerNames { get; set; }
         public PaymentRequest Payment { get; set; }

@@ -52,23 +52,18 @@ namespace Flamingo_API.Models
 
 
 
-        public bool ValidateUser(string uname, string pwd, string role)
+        public User? ValidateUser(string uname, string pwd)
         {
-            //throw new NotImplementedException();
-            User user = _context.Users.Where(u => u.Email == uname).Single();
+            User user = _context.Users.SingleOrDefault(u => u.Email == uname);
 
-            if (user.Password == pwd)
+            if (user != null && user.Password == pwd)
             {
-                return true;
+                return user;
             }
 
-            else
-            {
-                return false;
-            }
-
-
+            return null;  // Return null if user is not found or password doesn't match
         }
+
 
 
 
